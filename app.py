@@ -12,32 +12,32 @@ st.set_page_config(page_title="Assessment Feedback Generator", page_icon="📝",
 
 DEFAULT_COLUMNS = [
     "Assessment ID", "Saved At", "Candidate", "Personal", "Interviewer", "Date and time", "Remarks",
-    "Device & Internet Setup", "Appearance & Background", "Energy & Confidence",
-    "Communication Skills", "Introduction Pitch", "Technical Knowledge",
-    "Behavioral Responses", "Resume & Project Knowledge", "Professional Etiquette",
-    "Overall Market Readiness", "Total Score", "Feedback", "Generated Feedback"
+    "Device & Internet Setup (10%)", "Appearance & Background (10%)", "Energy & Confidence (10%)",
+    "Communication Skills (15%)", "Introduction Pitch (10%)", "Technical Knowledge (20%)",
+    "Behavioral Responses (10%)", "Resume & Project Knowledge (10%)", "Professional Etiquette (5%)",
+    "Overall Market Readiness (5%)", "Total Score", "Feedback", "Generated Feedback"
 ]
 
 INPUT_COLUMNS = [c for c in DEFAULT_COLUMNS if c not in ["Assessment ID", "Saved At", "Generated Feedback"]]
 
 SCORE_COLUMNS = [
-    "Device & Internet Setup", "Appearance & Background", "Energy & Confidence",
-    "Communication Skills", "Introduction Pitch", "Technical Knowledge",
-    "Behavioral Responses", "Resume & Project Knowledge", "Professional Etiquette",
-    "Overall Market Readiness"
+    "Device & Internet Setup (10%)", "Appearance & Background (10%)", "Energy & Confidence (10%)",
+    "Communication Skills (15%)", "Introduction Pitch (10%)", "Technical Knowledge (20%)",
+    "Behavioral Responses (10%)", "Resume & Project Knowledge (10%)", "Professional Etiquette (5%)",
+    "Overall Market Readiness (5%)"
 ]
 
 MAX_SCORE = {
-    "Device & Internet Setup": 10,
-    "Appearance & Background": 10,
-    "Energy & Confidence": 10,
-    "Communication Skills": 15,
-    "Introduction Pitch": 10,
-    "Technical Knowledge": 20,
-    "Behavioral Responses": 10,
-    "Resume & Project Knowledge": 10,
-    "Professional Etiquette": 5,
-    "Overall Market Readiness": 5,
+    "Device & Internet Setup (10%)": 10,
+    "Appearance & Background (10%)": 10,
+    "Energy & Confidence (10%)": 10,
+    "Communication Skills (15%)": 15,
+    "Introduction Pitch (10%)": 10,
+    "Technical Knowledge (20%)": 20,
+    "Behavioral Responses (10%)": 10,
+    "Resume & Project Knowledge (10%)": 10,
+    "Professional Etiquette (5%)": 5,
+    "Overall Market Readiness (5%)": 5,
 }
 
 
@@ -82,15 +82,15 @@ def strengths_and_improvements(row):
     improvements = []
 
     checks = [
-        ("Device & Internet Setup", "Strong device and internet setup", "Ensure device, camera, audio, and internet are fully stable before every interview."),
-        ("Appearance & Background", "Professional appearance and acceptable interview background", "Improve the interview background. Use a clean/plain background or blur, not a distracting virtual background."),
-        ("Energy & Confidence", "Good energy and confidence throughout the session", "Increase energy and confidence; low energy makes even correct answers sound weak."),
-        ("Communication Skills", "Clear communication and professional speaking style", "Improve communication by keeping answers direct, structured, and relevant to the question."),
-        ("Introduction Pitch", "Well-structured introduction pitch", "Strengthen the introduction pitch so it clearly sells experience, skills, tools, and target role."),
-        ("Technical Knowledge", "Strong technical knowledge and ability to explain concepts", "Strengthen technical fundamentals and practice explaining concepts with examples from project work."),
-        ("Behavioral Responses", "Good behavioral response quality", "Practice behavioral questions using the STAR method with real examples and measurable outcomes."),
-        ("Resume & Project Knowledge", "Strong understanding of resume, projects, and responsibilities", "Review resume and project details carefully so every claim can be explained confidently."),
-        ("Professional Etiquette", "Professional etiquette during the assessment", "Improve professional etiquette, especially scheduling discipline, punctuality, and interview commitment."),
+        ("Device & Internet Setup (10%)", "Strong device and internet setup", "Ensure device, camera, audio, and internet are fully stable before every interview."),
+        ("Appearance & Background (10%)", "Professional appearance and acceptable interview background", "Improve the interview background. Use a clean/plain background or blur, not a distracting virtual background."),
+        ("Energy & Confidence (10%)", "Good energy and confidence throughout the session", "Increase energy and confidence; low energy makes even correct answers sound weak."),
+        ("Communication Skills (15%)", "Clear communication and professional speaking style", "Improve communication by keeping answers direct, structured, and relevant to the question."),
+        ("Introduction Pitch (10%)", "Well-structured Introduction Pitch (10%)", "Strengthen the Introduction Pitch (10%) so it clearly sells experience, skills, tools, and target role."),
+        ("Technical Knowledge (20%)", "Strong Technical Knowledge (20%) and ability to explain concepts", "Strengthen technical fundamentals and practice explaining concepts with examples from project work."),
+        ("Behavioral Responses (10%)", "Good behavioral response quality", "Practice behavioral questions using the STAR method with real examples and measurable outcomes."),
+        ("Resume & Project Knowledge (10%)", "Strong understanding of resume, projects, and responsibilities", "Review resume and project details carefully so every claim can be explained confidently."),
+        ("Professional Etiquette (5%)", "Professional Etiquette (5%) during the assessment", "Improve Professional Etiquette (5%), especially scheduling discipline, punctuality, and interview commitment."),
     ]
 
     for col, good, bad in checks:
@@ -128,7 +128,7 @@ def generate_feedback(row, sender_name, sender_title, company_name):
     if not strengths:
         strengths = ["You participated in the assessment and showed willingness to engage in the process"]
     if not improvements:
-        improvements = ["Continue refining behavioral responses and interview presentation to make the performance stronger"]
+        improvements = ["Continue refining Behavioral Responses (10%) and interview presentation to make the performance stronger"]
 
     intro_quality = "exceptionally well" if label == "Ready for Marketing" else "reasonably well" if "Conditionally" in label else "below the expected market standard"
     result_note = {
@@ -147,7 +147,7 @@ Dear {name},
 
 Thank you for attending the assessment session.
 
-Overall, you performed {intro_quality} during the assessment. {raw_feedback if raw_feedback else 'Your performance was reviewed based on technical knowledge, communication, interview readiness, professionalism, and overall market expectations.'}
+Overall, you performed {intro_quality} during the assessment. {raw_feedback if raw_feedback else 'Your performance was reviewed based on Technical Knowledge (20%), communication, interview readiness, professionalism, and overall market expectations.'}
 
 Some of your key strengths observed during the assessment include:
 
