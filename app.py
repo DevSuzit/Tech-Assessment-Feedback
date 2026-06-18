@@ -1,18 +1,24 @@
 import re
+import uuid
+from datetime import datetime
 from io import BytesIO
 
+import gspread
 import pandas as pd
 import streamlit as st
+from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Assessment Feedback Generator", page_icon="📝", layout="wide")
 
 DEFAULT_COLUMNS = [
-    "Candidate", "Personal", "Interviewer", "Date and time", "Remarks",
+    "Assessment ID", "Saved At", "Candidate", "Personal", "Interviewer", "Date and time", "Remarks",
     "Device & Internet Setup", "Appearance & Background", "Energy & Confidence",
     "Communication Skills", "Introduction Pitch", "Technical Knowledge",
     "Behavioral Responses", "Resume & Project Knowledge", "Professional Etiquette",
-    "Overall Market Readiness", "Total Score", "Feedback"
+    "Overall Market Readiness", "Total Score", "Feedback", "Generated Feedback"
 ]
+
+INPUT_COLUMNS = [c for c in DEFAULT_COLUMNS if c not in ["Assessment ID", "Saved At", "Generated Feedback"]]
 
 SCORE_COLUMNS = [
     "Device & Internet Setup", "Appearance & Background", "Energy & Confidence",
@@ -20,19 +26,6 @@ SCORE_COLUMNS = [
     "Behavioral Responses", "Resume & Project Knowledge", "Professional Etiquette",
     "Overall Market Readiness"
 ]
-
-WEIGHTS = {
-    "Device & Internet Setup": 0.10,
-    "Appearance & Background": 0.10,
-    "Energy & Confidence": 0.10,
-    "Communication Skills": 0.15,
-    "Introduction Pitch": 0.10,
-    "Technical Knowledge": 0.20,
-    "Behavioral Responses": 0.10,
-    "Resume & Project Knowledge": 0.05,
-    "Professional Etiquette": 0.05,
-    "Overall Market Readiness": 0.05,
-}
 
 MAX_SCORE = {
     "Device & Internet Setup": 10,
@@ -173,70 +166,197 @@ Some of your key strengths observed during the assessment include:
     return text
 
 
+def get_sheet_id():
+    return st.secrets.get("GOOGLE_SHEET_ID", "") or st.secrets.get("google_sheet_id", "")
+
+
+def get_worksheet():
+    sheet_id = get_sheet_id()
+    if not sheet_id:
+        raise RuntimeError("Missing GOOGLE_SHEET_ID in Streamlit secrets.")
+
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    credentials = Credentials.from_service_account_info(
+        dict(st.secrets["gcp_service_account"]), scopes=scopes
+    )
+    client = gspread.authorize(credentials)
+    spreadsheet = client.open_by_key(sheet_id)
+
+    try:
+        worksheet = spreadsheet.worksheet("Assessments")
+    except gspread.WorksheetNotFound:
+        worksheet = spreadsheet.add_worksheet(title="Assessments", rows=1000, cols=len(DEFAULT_COLUMNS))
+        worksheet.append_row(DEFAULT_COLUMNS)
+
+    existing_headers = worksheet.row_values(1)
+    if existing_headers != DEFAULT_COLUMNS:
+        worksheet.update("A1", [DEFAULT_COLUMNS])
+    return worksheet
+
+
+def load_saved_data():
+    worksheet = get_worksheet()
+    records = worksheet.get_all_records()
+    if not records:
+        return pd.DataFrame(columns=DEFAULT_COLUMNS)
+    df = pd.DataFrame(records)
+    for col in DEFAULT_COLUMNS:
+        if col not in df.columns:
+            df[col] = ""
+    return df[DEFAULT_COLUMNS]
+
+
+def save_new_rows(rows_df):
+    worksheet = get_worksheet()
+    rows_to_save = []
+    for _, row in rows_df.iterrows():
+        row_dict = {col: clean_text(row.get(col, "")) for col in INPUT_COLUMNS}
+        if not row_dict.get("Candidate"):
+            continue
+        row_dict["Assessment ID"] = str(uuid.uuid4())
+        row_dict["Saved At"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        row_dict["Generated Feedback"] = generate_feedback(
+            row_dict,
+            st.session_state.get("sender_name", "Suzit Dev"),
+            st.session_state.get("sender_title", "Deputy Manager"),
+            st.session_state.get("company_name", "B. AND B. Soft Tech Kathmandu Pvt. Ltd."),
+        )
+        rows_to_save.append([row_dict.get(col, "") for col in DEFAULT_COLUMNS])
+
+    if rows_to_save:
+        worksheet.append_rows(rows_to_save, value_input_option="USER_ENTERED")
+    return len(rows_to_save)
+
+
 def load_excel(uploaded_file):
     raw = pd.read_excel(uploaded_file, header=None)
     header = raw.iloc[0].tolist()
     df = raw.iloc[2:].copy()
     df.columns = header
     df = df.loc[:, [c for c in df.columns if pd.notna(c)]]
-    for col in DEFAULT_COLUMNS:
+    for col in INPUT_COLUMNS:
         if col not in df.columns:
             df[col] = ""
-    return df[DEFAULT_COLUMNS].reset_index(drop=True)
+    return df[INPUT_COLUMNS].reset_index(drop=True)
 
 
 st.title("Candidate Assessment Feedback Generator")
-st.caption("Upload your Technical Assessment Excel file, edit the scores/details, and generate candidate-ready feedback.")
+st.caption("Shared version: saves assessment records to Google Sheets so everyone sees the same data.")
 
 with st.sidebar:
     st.header("Signature")
-    sender_name = st.text_input("Your Name", value="Suzit Dev")
-    sender_title = st.text_input("Title", value="Deputy Manager")
-    company_name = st.text_input("Company", value="B. AND B. Soft Tech Kathmandu Pvt. Ltd.")
+    st.session_state["sender_name"] = st.text_input("Your Name", value="Suzit Dev")
+    st.session_state["sender_title"] = st.text_input("Title", value="Deputy Manager")
+    st.session_state["company_name"] = st.text_input("Company", value="B. AND B. Soft Tech Kathmandu Pvt. Ltd.")
     st.header("Readiness Rules")
     st.write("85+ = Ready | 70–84 = Conditionally Ready | Below 70 = Not Ready")
 
-uploaded = st.file_uploader("Upload Technical Assessment Excel file", type=["xlsx"])
+missing_secrets = False
+try:
+    _ = get_sheet_id()
+    if not _ or "gcp_service_account" not in st.secrets:
+        missing_secrets = True
+except Exception:
+    missing_secrets = True
 
-if uploaded:
-    df = load_excel(uploaded)
-else:
-    df = pd.DataFrame(columns=DEFAULT_COLUMNS)
-    st.info("Upload your Excel file to begin. You can also add rows manually below.")
+if missing_secrets:
+    st.error("Google Sheets database is not connected yet. Add GOOGLE_SHEET_ID and gcp_service_account in Streamlit secrets.")
+    st.stop()
 
-edited_df = st.data_editor(
-    df,
-    num_rows="dynamic",
-    use_container_width=True,
-    column_config={
-        "Feedback": st.column_config.TextColumn(width="large"),
-        "Remarks": st.column_config.TextColumn(width="medium"),
-        "Total Score": st.column_config.NumberColumn(min_value=0, max_value=100),
-    },
-)
+tab_add, tab_saved = st.tabs(["Add / Upload Assessment", "Saved Assessments"])
 
-if len(edited_df) > 0:
-    candidate_options = [f"{i + 1}. {clean_text(row.get('Candidate'))}" for i, row in edited_df.iterrows() if clean_text(row.get("Candidate"))]
-    selected = st.selectbox("Select candidate", candidate_options)
-    selected_idx = int(selected.split(".", 1)[0]) - 1
+with tab_add:
+    uploaded = st.file_uploader("Upload Technical Assessment Excel file", type=["xlsx"])
 
-    row = edited_df.iloc[selected_idx]
-    generated = generate_feedback(row, sender_name, sender_title, company_name)
+    if uploaded:
+        df = load_excel(uploaded)
+    else:
+        df = pd.DataFrame(columns=INPUT_COLUMNS)
+        st.info("Upload your Excel file or add rows manually below.")
 
-    st.subheader("Generated Feedback")
-    st.markdown(generated)
-    st.download_button(
-        "Download Feedback as .txt",
-        data=generated.encode("utf-8"),
-        file_name=f"feedback_{candidate_name(row.get('Candidate')).replace(' ', '_')}.txt",
-        mime="text/plain",
+    edited_df = st.data_editor(
+        df,
+        num_rows="dynamic",
+        use_container_width=True,
+        column_config={
+            "Feedback": st.column_config.TextColumn(width="large"),
+            "Remarks": st.column_config.TextColumn(width="medium"),
+            "Total Score": st.column_config.NumberColumn(min_value=0, max_value=100),
+        },
     )
+
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        if st.button("Save Assessment Data", type="primary"):
+            try:
+                count = save_new_rows(edited_df)
+                st.success(f"Saved {count} row(s) to the shared Google Sheet.")
+            except Exception as e:
+                st.error(f"Save failed: {e}")
+
+    if len(edited_df) > 0:
+        candidate_options = [f"{i + 1}. {clean_text(row.get('Candidate'))}" for i, row in edited_df.iterrows() if clean_text(row.get("Candidate"))]
+        if candidate_options:
+            selected = st.selectbox("Select candidate for feedback preview", candidate_options)
+            selected_idx = int(selected.split(".", 1)[0]) - 1
+            row = edited_df.iloc[selected_idx]
+            generated = generate_feedback(
+                row,
+                st.session_state["sender_name"],
+                st.session_state["sender_title"],
+                st.session_state["company_name"],
+            )
+
+            st.subheader("Generated Feedback Preview")
+            st.markdown(generated)
+            st.download_button(
+                "Download Feedback as .txt",
+                data=generated.encode("utf-8"),
+                file_name=f"feedback_{candidate_name(row.get('Candidate')).replace(' ', '_')}.txt",
+                mime="text/plain",
+            )
 
     output = BytesIO()
     edited_df.to_excel(output, index=False)
     st.download_button(
-        "Download Updated Assessment Data",
+        "Download Current Edited Data",
         data=output.getvalue(),
         file_name="updated_technical_assessment.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
+with tab_saved:
+    st.subheader("Saved Assessments")
+    if st.button("Refresh Saved Data"):
+        st.rerun()
+    try:
+        saved_df = load_saved_data()
+        st.dataframe(saved_df, use_container_width=True)
+
+        if len(saved_df) > 0:
+            saved_options = [f"{i + 1}. {clean_text(row.get('Candidate'))}" for i, row in saved_df.iterrows() if clean_text(row.get("Candidate"))]
+            selected_saved = st.selectbox("Select saved candidate", saved_options, key="saved_candidate")
+            saved_idx = int(selected_saved.split(".", 1)[0]) - 1
+            saved_row = saved_df.iloc[saved_idx]
+            saved_feedback = clean_text(saved_row.get("Generated Feedback")) or generate_feedback(
+                saved_row,
+                st.session_state["sender_name"],
+                st.session_state["sender_title"],
+                st.session_state["company_name"],
+            )
+            st.subheader("Saved Feedback")
+            st.markdown(saved_feedback)
+
+            saved_output = BytesIO()
+            saved_df.to_excel(saved_output, index=False)
+            st.download_button(
+                "Download All Saved Assessments",
+                data=saved_output.getvalue(),
+                file_name="all_saved_assessments.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+    except Exception as e:
+        st.error(f"Could not load saved assessments: {e}")
