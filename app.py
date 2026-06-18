@@ -11,7 +11,7 @@ from google.oauth2.service_account import Credentials
 st.set_page_config(page_title="Assessment Feedback Generator", page_icon="📝", layout="wide")
 
 DEFAULT_COLUMNS = [
-    "Assessment ID", "Saved At", "Candidate", "Personal", "Interviewer", "Date and time", "Remarks",
+    "Assessment ID", "Saved At", "Candidate", "Email", "Interviewer", "Date and time", "Note",
     "Device & Internet Setup (10%)", "Appearance & Background (10%)", "Energy & Confidence (10%)",
     "Communication Skills (15%)", "Introduction Pitch (10%)", "Technical Knowledge (20%)",
     "Behavioral Responses (10%)", "Resume & Project Knowledge (10%)", "Professional Etiquette (5%)",
@@ -102,7 +102,7 @@ def strengths_and_improvements(row):
         elif ratio < 0.70:
             improvements.append(bad)
 
-    feedback_raw = clean_text(row.get("Feedback", "")) + " " + clean_text(row.get("Remarks", ""))
+    feedback_raw = clean_text(row.get("Feedback", "")) + " " + clean_text(row.get("Note", ""))
     lower = feedback_raw.lower()
     if "virtual background" in lower:
         improvements.append("Avoid using a virtual background. A blurred or clean plain background looks more professional.")
@@ -122,7 +122,7 @@ def generate_feedback(row, sender_name, sender_title, company_name):
     score = row.get("Total Score", "")
     label = readiness_label(score)
     raw_feedback = clean_text(row.get("Feedback", ""))
-    remarks = clean_text(row.get("Remarks", ""))
+    Note = clean_text(row.get("Note", ""))
     strengths, improvements = strengths_and_improvements(row)
 
     if not strengths:
@@ -159,8 +159,8 @@ Some of your key strengths observed during the assessment include:
     for item in improvements:
         text += f"- {item}\n"
 
-    if remarks:
-        text += f"\nAdditional note: {remarks}\n"
+    if Note:
+        text += f"\nAdditional note: {Note}\n"
 
     text += f"\nWith focused preparation in the areas above, you can improve your overall interview performance and present yourself more effectively in the job market.{score_line}\n\n**Assessment Result:** {label} – {result_note}\n\nBest Regards,  \n{sender_name}  \n{sender_title}  \n{company_name}"
     return text
@@ -283,7 +283,7 @@ with tab_add:
         use_container_width=True,
         column_config={
             "Feedback": st.column_config.TextColumn(width="large"),
-            "Remarks": st.column_config.TextColumn(width="medium"),
+            "Note": st.column_config.TextColumn(width="medium"),
             "Total Score": st.column_config.NumberColumn(min_value=0, max_value=100),
         },
     )
