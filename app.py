@@ -220,8 +220,8 @@ def save_new_rows(rows_df):
         row_dict["Saved At"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         row_dict["Generated Feedback"] = generate_feedback(
             row_dict,
-            st.session_state.get("sender_name", "Sujeet Dev"),
-            st.session_state.get("sender_title", "Deputy Manager"),
+            st.session_state.get("sender_name", "Team BNB"),
+            st.session_state.get("sender_title", "Human Resources"),
             st.session_state.get("company_name", "B&B EduTech"),
         )
         rows_to_save.append([row_dict.get(col, "") for col in DEFAULT_COLUMNS])
@@ -248,8 +248,8 @@ st.caption("Shared version: saves assessment records to Google Sheets so everyon
 
 with st.sidebar:
     st.header("Signature")
-    st.session_state["sender_name"] = st.text_input("Your Name", value="Sujeet Dev")
-    st.session_state["sender_title"] = st.text_input("Title", value="Deputy Manager")
+    st.session_state["sender_name"] = st.text_input("Your Name", value="Team BNB")
+    st.session_state["sender_title"] = st.text_input("Title", value="Human Resources")
     st.session_state["company_name"] = st.text_input("Company", value="B&B EduTech")
     st.header("Readiness Rules")
     st.write("85+ = Ready | 70–84 = Conditionally Ready | Below 70 = Not Ready")
