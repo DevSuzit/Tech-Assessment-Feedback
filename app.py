@@ -86,11 +86,11 @@ def strengths_and_improvements(row):
         ("Appearance & Background (10%)", "Professional appearance and acceptable interview background", "Improve the interview background. Use a clean/plain background or blur, not a distracting virtual background."),
         ("Energy & Confidence (10%)", "Good energy and confidence throughout the session", "Increase energy and confidence; low energy makes even correct answers sound weak."),
         ("Communication Skills (15%)", "Clear communication and professional speaking style", "Improve communication by keeping answers direct, structured, and relevant to the question."),
-        ("Introduction Pitch (10%)", "Well-structured Introduction Pitch (10%)", "Strengthen the Introduction Pitch (10%) so it clearly sells experience, skills, tools, and target role."),
-        ("Technical Knowledge (20%)", "Strong Technical Knowledge (20%) and ability to explain concepts", "Strengthen technical fundamentals and practice explaining concepts with examples from project work."),
+        ("Introduction Pitch (10%)", "Well-structured Introduction Pitch", "Strengthen the Introduction Pitch so it clearly sells experience, skills, tools, and target role."),
+        ("Technical Knowledge (20%)", "Strong Technical Knowledge and ability to explain concepts", "Strengthen technical fundamentals and practice explaining concepts with examples from project work."),
         ("Behavioral Responses (10%)", "Good behavioral response quality", "Practice behavioral questions using the STAR method with real examples and measurable outcomes."),
         ("Resume & Project Knowledge (10%)", "Strong understanding of resume, projects, and responsibilities", "Review resume and project details carefully so every claim can be explained confidently."),
-        ("Professional Etiquette (5%)", "Professional Etiquette (5%) during the assessment", "Improve Professional Etiquette (5%), especially scheduling discipline, punctuality, and interview commitment."),
+        ("Professional Etiquette (5%)", "Professional Etiquette during the assessment", "Improve Professional Etiquette, especially scheduling discipline, punctuality, and interview commitment."),
     ]
 
     for col, good, bad in checks:
